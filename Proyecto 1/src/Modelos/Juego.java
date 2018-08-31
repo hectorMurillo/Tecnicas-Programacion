@@ -7,18 +7,20 @@ import java.util.Scanner;
 
 public class Juego {
 
-    Integer numeroJugadores = 0;
-    ArrayList<Jugador> jugadores = new ArrayList<Jugador>();
-    Croupier croupier = new Croupier();
-    Scanner scn = new Scanner(System.in);
+    //Atributos
+    private Integer numeroJugadores = 0;
+    //ArrayList<Jugador> jugadores = new ArrayList<Jugador>();
+    private Jugador[] jugadores;
+    private Scanner scn = new Scanner(System.in);
+    private Croupier croupier;
+
     public Juego(){
+        croupier = new Croupier();
         this.iniciarJuego();
     }
-
     //Método para solicitar cantidad de jugadores.
     public void iniciarJuego(){
         System.out.print("*************BIENVENIDOS A BLACKJACK************ \n");
-        int numeroJugadores = 0;
         do{
             System.out.print("¿Cuántos jugadores participan (1-6)?");
             try{
@@ -30,50 +32,44 @@ public class Juego {
                 numeroJugadores = 0;
             }
         }while (numeroJugadores < 1 || numeroJugadores > 6);
-
-        jugar(numeroJugadores);
+        jugar();
     }
-
-    //MÉTODO QUE SOLICITA LOS DATOS DE LOS JUGADORES, LLEVA EL FLUJO DEL JUEGO Y SE TOMA EN CUENTA LAS VALIDACIONES DE LAS REGLAS
-    private void jugar(int numeroJugadores) {
-        //PIDE DATOS DE JUGADORES
-        Jugador jugadores[] = new Jugador[numeroJugadores];
+    private void pideDatosJugadores(){
+        this.jugadores = new Jugador[numeroJugadores];
         for(int i=0 ; i<jugadores.length ; i++){
             System.out.println("Nombre del jugador "+(i+1));
             jugadores[i] = new Jugador(scn.next());
         }
-        Croupier croupier = new Croupier();
+    }
+
+    //MÉTODO QUE SOLICITA LOS DATOS DE LOS JUGADORES, LLEVA EL FLUJO DEL JUEGO Y SE TOMA EN CUENTA LAS VALIDACIONES DE LAS REGLAS
+    private void jugar() {
         System.out.println("***************INICIA JUEGO*********");
         croupier.barajear();
+        this.pideDatosJugadores();
         croupier.repartoInicial(jugadores);
-        //*************IMPRESION DE LOS JUEGOS DE CADA UNO DE LOS JUGADORES
-        for (int i =0;i<jugadores.length;i++){
-            System.out.print(jugadores[i].getNombre()+" Tiene "
-                    +jugadores[i].getMano().get(0).getNombreCarta()+" y "+jugadores[i].getMano().get(1).getNombreCarta()+"\n");
+        for (Jugador jugador:jugadores) {
+            System.out.println(this.obtenerSalidaMano(jugador));
         }
         //**************IMPRESION DEL JUEGO DE CROUPIER
-        System.out.print("CROUPIER tiene: "+croupier.getMano().get(0).getNombreCarta()+" y "+croupier.getMano().get(1).getNombreCarta());
-        System.out.print("\n");
-        //EN ESTE MÉTODO EL CLOUPIER VALIDA LAS MANOS DE CADA JUGADOR Y TOMA DECISIONES.
+        System.out.println(this.obtenerSalidaMano(croupier));
+        //AQUI EL CLOUPIER VALIDA LAS MANOS DE CADA JUGADOR Y TOMA DECISIONES.
         for(int i=0 ; i<jugadores.length ; i++){
-            System.out.println("*******CROUPIER DICE/PREGUNTA:********");
-            evaluarAs(jugadores[i]);
-            if(croupier.tieneBlackJack(jugadores[i])){
-                System.out.println(jugadores[i].getNombre()+" Tiene Blac-Jack!");
-            }else{
-                if(jugadores[i].getEstatus() == EstatusJugador.JUGANDO){
+            System.out.println("--------------CROUPIER DICE--------------");
+            if(jugadores[i].getEstatus() == EstatusJugador.JUGANDO){
+                if(croupier.tieneBlackJack(jugadores[i])){
+                    System.out.println(jugadores[i].getNombre()+" Tiene Blac-Jack!");
+                }else{
                     if(croupier.jugadorPuedeSeguir(jugadores[i])) {
-                        evaluarAs(jugadores[i]);
-                        if(jugadores[i].obtenerTotalPuntos() == 21){
-                              croupier.validarJugada(jugadores[i]);
-                        }else{
+                        if(croupier.tieneVeintyUno(jugadores[i])) {
+                            System.out.println("Tiene 21 !");
+                            //Si no tienes 21 pero puedes seguir
+                        }else {
                             boolean resp = false;
                             do{
-                                evaluarAs(jugadores[i]);
-                                if(croupier.tieneVeintyUno(jugadores[i])){
-                                    System.out.println(jugadores[i].getNombre()+" Tiene 21 puntos!");
-                                    break;
-                                }else if(croupier.otraCarta(jugadores[i])){
+                                croupier.evaluarAs(jugadores[i]);
+                                if(croupier.otraCarta(jugadores[i])){
+                                    croupier.evaluarAs(jugadores[i]);
                                     System.out.println("***ATENCIÓN**");
                                     System.out.println("EL JUGADOR "+jugadores[i].getNombre()+" TIENE EL JUEGO \n");
                                     Carta cartaRecibo = croupier.obtenerCartaARepartir();
@@ -81,26 +77,63 @@ public class Juego {
                                     for (Carta carta:jugadores[i].getMano()) {
                                         System.out.println(carta.getNombreCarta());
                                     }
-                                }else{
-                                    jugadores[i].setEstatus(EstatusJugador.PLANTADO);
-                                    break;
+                                    //Por si no entra al de 21
+                                    if(croupier.tieneVeintyUno(jugadores[i])){
+                                        System.out.print("Tiene 21 !! \n");
+                                    }
+                                }else if(jugadores[i].obtenerTotalPuntos()>=21){
+                                        croupier.evaluarAs(jugadores[i]);
+                                        if(jugadores[i].obtenerTotalPuntos() == 21){
+                                            System.out.println("Tiene 21 !");
+                                        }else{
+                                            System.out.println("Perdiste "+jugadores[i].getNombre());
+                                            jugadores[i].setEstatus(EstatusJugador.PERDIDO);
+                                        }
+                                        break;
+                                        } else if(!croupier.jugadorPuedeSeguir(jugadores[i])){
+                                            break;
+                                        }
+                                else if(croupier.tieneVeintyUno(jugadores[i])) {
+                                    System.out.println(jugadores[i].getNombre()+" Tiene 21 puntos!");
                                 }
-                            }while (croupier.jugadorPuedeSeguir(jugadores[i]));
+                                else{
+                                    jugadores[i].setEstatus(EstatusJugador.PLANTADO);
+                                }
+                            }while (croupier.jugadorPuedeSeguir(jugadores[i]) && jugadores[i].getEstatus() == EstatusJugador.JUGANDO);
                         }
                     }
                 }
             }
             //CUANDO SEA LA ULTIMA CARTA CHECAR CONTRA QUIEN GANÓ O PERDIÓ EL CROUPIER Y MUESTRA LOS RESULTADOS
             if(i+1  == jugadores.length){
+                croupier.evaluarAs(croupier);
+                if(croupier.tieneBlackJack(croupier)){
+                    System.out.print("Tiene Blac-Jack!");
+                }else if(croupier.tieneVeintyUno(croupier)){
+                    System.out.print("Tiene 21!");
+                }else{
+                    while(croupier.obtenerTotalPuntos()<17){
+                        boolean hayJugadoresJugando = false;
+                        for(Jugador jugador : jugadores){
+                            if(jugador.getEstatus() == EstatusJugador.JUGANDO || jugador.getEstatus() == EstatusJugador.PLANTADO){
+                                hayJugadoresJugando = true;
+                            }
+                        }
+                        if(hayJugadoresJugando){
+                            croupier.otraCarta(croupier);
+                            Carta cartaRecibo = croupier.obtenerCartaARepartir();
+                            croupier.mano.add(cartaRecibo);
+                        }else{
+                            break;
+                        }
+                    };
+                }
+                mostrarResultadosCroupier();
+                croupier.evaluarAs(croupier);
+                System.out.println(("Puntos del croupier "+croupier.obtenerTotalPuntos()).toUpperCase());
                 System.out.println("-------TABLA DE RESULTADOS-------");
-                evaluarAs(croupier);
-                while(croupier.obtenerTotalPuntos()<17 && !hayJugadoresJugando(jugadores)){
-                    croupier.otraCarta(croupier);
-                    Carta cartaRecibo = croupier.obtenerCartaARepartir();
-                    croupier.mano.add(cartaRecibo);
-                };
-                System.out.println("Puntos del croupier "+croupier.obtenerTotalPuntos());
                 for(int j=0;j<jugadores.length;j++){
+                    croupier.evaluarAs(jugadores[i]);
                     if(jugadores[j].obtenerTotalPuntos()<=21){
                         System.out.println(croupier.validarJugada(jugadores[j])+" con "+jugadores[j].getNombre().toUpperCase());
                     }else if(jugadores[j].obtenerTotalPuntos()>21){
@@ -119,42 +152,24 @@ public class Juego {
         }
     }
 
-    private boolean hayJugadoresJugando(Jugador [] jugadores) {
-        boolean hayJugando = false;
-        int idx = 0;
-        for(int i = 0; i<jugadores.length;i++){
-            if(jugadores[i].getEstatus() == EstatusJugador.PERDIDO)
-            {
-                idx++;
-            }
+    private void mostrarResultadosCroupier() {
+        System.out.println("-------MANO FINAL CROUPIER-------");
+        String msj = "";
+        for (Carta carta:croupier.getMano()) {
+            msj += "\t"+carta.getNombreCarta()+"\n";
         }
-        if(idx == jugadores.length){
-            hayJugando = false;
-        }else{
-            hayJugando = true;
-        }
-        return hayJugando;
+        System.out.print(msj);
     }
 
-    //VERIFICA SI UN JUGADOR TIENE AS Y SI ES ASÍ BUSCA LA MEJOR FORMA DE APLICARLE EL VALOR (11 U 1)
-    private void evaluarAs(Jugador jugador) {
-        int sumaPuntos = 0;
-        int posicionAsEnMano = 0;
-        int idx = 0;
-        for (Carta carta: jugador.mano) {
-            idx++;
-            sumaPuntos += carta.valor;
-            if(carta.valor == 1 || carta.valor == 11){
-                posicionAsEnMano = idx;
-            }
+    //MÉTODO QUE REGRESA UN STRING CON LAS CARTAS QUE TIENE EL JUGADOR QUE SE MANDA POR PARAMETRO
+    private String obtenerSalidaMano(Jugador jugador){
+        croupier.evaluarAs(jugador);
+        String msjARegresar = "";
+        msjARegresar = "----Mano de "+jugador.getNombre()+": "+jugador.obtenerTotalPuntos()+"(pts).---- \n";
+        for (Carta carta:jugador.getMano()) {
+            msjARegresar += "\t"+carta.getNombreCarta()+"\n";
         }
-        if(posicionAsEnMano > 0){
-            if(jugador.obtenerTotalPuntos()>21){
-                jugador.mano.get(posicionAsEnMano-1).setValor(1);
-            }else{
-                jugador.mano.get(posicionAsEnMano-1).setValor(11);
-            }
-        }
+        return  msjARegresar;
     }
 
     public int getNumeroJugadores() {
@@ -164,10 +179,10 @@ public class Juego {
         this.numeroJugadores = numeroJugadores;
     }
 
-    public ArrayList<Jugador> getJugadores() {
+    public Jugador[] getJugadores() {
         return jugadores;
     }
-    public void setJugadores(ArrayList<Jugador> jugadores) {
+    public void setJugadores(Jugador[] jugadores) {
         this.jugadores = jugadores;
     }
 
@@ -177,5 +192,4 @@ public class Juego {
     public void setCroupier(Croupier croupier) {
         this.croupier = croupier;
     }
-
 }

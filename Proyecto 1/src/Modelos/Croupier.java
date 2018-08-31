@@ -5,8 +5,8 @@ import java.util.Random;
 import java.util.Scanner;
 
 public class Croupier extends  Jugador {
-
     public Croupier(){
+        this.setNombre("Croupier");
         Baraja.crearBaraja();
     }
     //MÉTODO QUE BARAJEA LAS CARTAS OBTENIDAS COMO MAZO PARA EL JUEGO
@@ -35,22 +35,23 @@ public class Croupier extends  Jugador {
     public Carta obtenerCartaARepartir(){
         Random rnd = new Random();
         Carta carta = new Carta();
-        int indexCarta = rnd.nextInt(Baraja.cartas.size());
-        carta = Baraja.cartas.get(indexCarta);
-        Baraja.cartas.remove(indexCarta);
+        int indiceCarta = rnd.nextInt(Baraja.cartas.size());
+        carta = Baraja.cartas.get(indiceCarta);
+        Baraja.cartas.remove(indiceCarta);
         return carta;
     }
     //MÉTODO QUE VÁLIDA SI UN JUGADOR PUEDE SEGUIR EN EL JUEGO O YA PERDIÓ
     public Boolean jugadorPuedeSeguir(Jugador jugador){
-        int sumaPuntos = 0;
         boolean puedeSeguir = false;
-        for (Carta carta: jugador.getMano()) {
-            sumaPuntos += carta.valor;
-        }
-        puedeSeguir = sumaPuntos <= 21 ? true : false;
+        this.evaluarAs(jugador);
+        puedeSeguir = jugador.obtenerTotalPuntos() < 21 ? true : false;
         if(!puedeSeguir) {
-            jugador.setEstatus(EstatusJugador.PERDIDO);
-            System.out.println(jugador.getNombre()+" HA PERDIDO CON "+sumaPuntos+" PUNTOS");
+            if(jugador.obtenerTotalPuntos() == 21){
+                jugador.setEstatus(EstatusJugador.PLANTADO);
+            }else{
+                jugador.setEstatus(EstatusJugador.PERDIDO);
+                System.out.println(jugador.getNombre()+" HA PERDIDO CON "+jugador.obtenerTotalPuntos()+" PUNTOS");
+            }
         }
         return puedeSeguir;
     }
@@ -94,14 +95,14 @@ public class Croupier extends  Jugador {
     //MÉTODO QUE VÁLIDA SI
     public Boolean tieneBlackJack(Jugador jugador) {
         if(this.tieneVeintyUno(jugador) && jugador.getMano().size() == 2){
-            jugador.setEstatus(EstatusJugador.PLANTADO);
             return true;
         }else{
             return false;
         }
     }
-    //MÉTODO QUE VALIDA SI EL TOTAL DE PUNTOS ES = A 21
+    //MÉTODO QUE VALIDA SI EL TOTAL DE PUNTOS ES = A 21 Y CAMBIA ESTATUS A PLANTADO
     public Boolean tieneVeintyUno(Jugador jugador) {
+        this.evaluarAs(jugador);
         if(jugador.obtenerTotalPuntos() == 21){
             jugador.setEstatus(EstatusJugador.PLANTADO);
             return true;
@@ -131,12 +132,36 @@ public class Croupier extends  Jugador {
             if(jugador instanceof Croupier){
                 resp="s";
             }else{
-                System.out.println("#####TURNO DE "+jugador.getNombre().toUpperCase()+"#####");
-                System.out.println("¿Quiere otra carta?, tienes "+jugador.obtenerTotalPuntos()+" puntos (Respuestas: Si o No)");
-                resp = scn.next();
+                if(jugador.obtenerTotalPuntos()>=21){
+                    break;
+                }else{
+                    System.out.println("#####TURNO DE "+jugador.getNombre().toUpperCase()+"#####");
+                    System.out.println("¿Quiere otra carta?, tienes "+jugador.obtenerTotalPuntos()+" puntos (Respuestas: Si o No)");
+                    resp = scn.next();
+                }
             }
             quiereMas = resp.toLowerCase().charAt(0) == 's' ? true : false;
         }while ((resp.toLowerCase()).charAt(0) != 's' &&  (resp.toLowerCase()).charAt(0) != 'n');
         return quiereMas;
+    }
+    //VERIFICA SI UN JUGADOR TIENE AS Y SI ES ASÍ BUSCA LA MEJOR FORMA DE APLICARLE EL VALOR (11 U 1)
+    public void evaluarAs(Jugador jugador) {
+        int sumaPuntos = 0;
+        int posicionAsEnMano = 0;
+        int idx = 0;
+        for (Carta carta: jugador.mano) {
+            idx++;
+            sumaPuntos += carta.valor;
+            if(carta.valor == 1 || carta.valor == 11){
+                posicionAsEnMano = idx;
+            }
+        }
+        if(posicionAsEnMano > 0){
+            if(jugador.obtenerTotalPuntos()>21){
+                jugador.mano.get(posicionAsEnMano-1).setValor(1);
+            }else{
+                jugador.mano.get(posicionAsEnMano-1).setValor(11);
+            }
+        }
     }
 }

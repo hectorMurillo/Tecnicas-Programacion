@@ -10,10 +10,7 @@ import java.util.Random;
 public class Baraja {
     static ArrayList<Carta> cartas = new ArrayList<Carta>();
 
-    /*public Baraja(){
-        crearBaraja();
-    }*/
-
+    //MÉTODO QUE CREA UNA LISTA DE CARTAS QUE REPRESENTA LA BARAJA.
     public static void crearBaraja() {
         for (Figura figura: Figura.values()) {
             for(int i=0 ; i<13 ; i++){
@@ -21,6 +18,9 @@ public class Baraja {
                 c.setNumero(i+1);
                 c.setFigura(figura);
                 c.valor = i+1;
+                if(c.getValor()>10){
+                    c.setValor(10);
+                }
                 cartas.add(c);
             }
         }
